@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>莫泊桑項鍊奇緣：重寫晚宴命運 (Dialogue RPG)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Playfair Display & Noto Sans TC -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:ital,wght@0,600;0,800;1,400&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Noto Serif TC', serif;
+      background-color: #1a1614;
+      color: #f3e8d8;
+    }
+    .font-playfair { font-family: 'Playfair Display', serif; }
+    .vintage-border {
+      border: 3px solid #c5a059;
+      box-shadow: inset 0 0 15px rgba(197, 160, 89, 0.2), 0 8px 25px rgba(0,0,0,0.7);
+    }
+    .gold-gradient {
+      background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
+    }
+    .gold-text {
+      background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 50%, #aa771c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .parchment-bg {
+      background-color: #241e1a;
+      background-image: radial-gradient(#3a3028 1px, transparent 0);
+      background-size: 16px 16px;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1614; }
+    ::-webkit-scrollbar-thumb { background: #c5a059; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-2 sm:p-4">
+
+  <!-- 16:9 Aspect Ratio Container -->
+  <div id="game-container" class="w-full max-w-5xl aspect-[16/9] min-h-[620px] bg-[#221c18] vintage-border rounded-xl relative overflow-hidden flex flex-col justify-between parchment-bg">
+
+    <!-- 頂部 HUD 狀態列 -->
+    <header class="bg-[#15110e]/90 border-b border-[#c5a059]/40 px-4 py-2 flex justify-between items-center z-10">
+      <div class="flex items-center space-x-3">
+        <span class="text-xl">💎</span>
+        <div>
+          <h1 class="text-xs sm:text-sm font-bold gold-text font-playfair tracking-wider">The Necklace: Fate Rewritten</h1>
+          <p id="stage-indicator" class="text-[10px] text-[#c5a059]/80">Stage 1: 舞會前夕與開銷籌備</p>
+        </div>
+      </div>
+
+      <!-- Matilda 理智/幸福值 Bar -->
+      <div class="flex items-center space-x-2 w-1/3 max-w-xs">
+        <span class="text-xs font-bold text-[#e6c994]">Happiness:</span>
+        <div class="w-full bg-black/60 rounded-full h-3 border border-[#c5a059]/50 overflow-hidden relative">
+          <div id="hp-bar" class="bg-gradient-to-r from-red-600 via-amber-500 to-emerald-500 h-full w-[100%] transition-all duration-500"></div>
+        </div>
+        <span id="hp-text" class="text-xs font-mono font-bold text-[#fcf6ba]">100%</span>
+      </div>
+
+      <!-- 右側工具組 (音效/TTS/API/分數) -->
+      <div class="flex items-center space-x-2">
+        <div class="text-right mr-2 hidden sm:block">
+          <div class="text-[10px] text-gray-400">SCORE</div>
+          <div id="score-display" class="text-sm font-bold font-mono text-[#fcf6ba]">0000</div>
+        </div>
+        <button id="btn-sound" onclick="toggleSound()" class="p-1.5 bg-[#2a221c] border border-[#c5a059]/40 rounded hover:bg-[#3a3028] text-xs">🔊</button>
+        <button id="btn-settings" onclick="openSettingsModal()" class="p-1.5 bg-[#2a221c] border border-[#c5a059]/40 rounded hover:bg-[#3a3028] text-xs">⚙️</button>
+      </div>
+    </header>
+
+    <!-- 1. 起始畫面 (INIT_SCREEN) -->
+    <div id="screen-init" class="absolute inset-0 bg-[#1a1614]/95 z-20 flex flex-col justify-center items-center p-6 text-center">
+      <div class="text-4xl mb-2">📜</div>
+      <h2 class="text-2xl sm:text-3xl font-bold gold-text font-playfair mb-2">莫泊桑項鍊奇緣：重寫晚宴命運</h2>
+      <p class="text-xs sm:text-sm text-[#d4c2a6] max-w-xl mb-6 leading-relaxed">
+        成為 Matilda 的智慧參謀！在 19 世紀巴黎的命運抉擇點中，挑選正確的英文句型（分詞構句、if/whether、虛主詞 It、花費動詞），幫助 Matilda 避免悲劇並重獲幸福。
+      </p>
+
+      <div class="w-full max-w-sm space-y-3 mb-6">
+        <input type="text" id="player-name" placeholder="請輸入參謀姓名/座號" class="w-full bg-[#2a221c] border border-[#c5a059]/60 rounded px-3 py-2 text-sm text-center focus:outline-none focus:border-[#fcf6ba]">
+        <div class="flex justify-center space-x-4 text-xs text-[#c5a059]">
+          <label><input type="radio" name="mode" value="story" checked> 故事闖關模式</label>
+          <label><input type="radio" name="mode" value="exam"> 統測真題特訓</label>
+        </div>
+      </div>
+
+      <button onclick="startGame()" class="gold-gradient text-black font-bold px-8 py-3 rounded-lg shadow-lg hover:brightness-110 text-base transition duration-200">
+        開始進入巴黎大賽 ➔
+      </button>
+    </div>
+
+    <!-- 2. 主遊戲遊玩區域 (PLAYING_STATE) -->
+    <main id="screen-play" class="flex-1 flex flex-col justify-between p-3 sm:p-4 gap-2 relative">
+
+      <!-- 視覺與角色呈現區 -->
+      <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 min-h-0">
+        <!-- 場景與百科圖像卡 -->
+        <div class="sm:col-span-2 bg-black/40 border border-[#c5a059]/30 rounded-lg p-2 flex flex-col justify-between relative overflow-hidden">
+          <img id="scene-img" src="" alt="Scene" class="w-full h-32 sm:h-44 object-cover rounded border border-[#c5a059]/20" onerror="handleImgError(this, 'Paris 1884')">
+          <div id="question-tag" class="absolute top-4 left-4 bg-black/80 border border-[#c5a059]/60 px-2 py-1 rounded text-[10px] text-[#fcf6ba] font-mono">
+            KN1: 分詞構句
+          </div>
+          <div class="mt-2 text-xs text-[#d4c2a6] italic bg-[#1a1614]/80 p-2 rounded border border-[#c5a059]/20 flex justify-between items-center">
+            <span id="scene-desc">舞會前夕，Matilda 正在籌備禮服...</span>
+            <button onclick="readCurrentSentence()" class="text-xs bg-[#c5a059]/20 hover:bg-[#c5a059]/40 text-[#fcf6ba] px-2 py-1 rounded border border-[#c5a059]/40 flex items-center gap-1">
+              🔊 聽朗讀
+            </button>
+          </div>
+        </div>
+
+        <!-- 角色立繪與心境 -->
+        <div class="bg-[#1a1614]/80 border border-[#c5a059]/30 rounded-lg p-3 flex flex-col items-center justify-center text-center">
+          <img id="avatar-img" src="" alt="Avatar" class="w-20 h-20 rounded-full border-2 border-[#c5a059] bg-[#2a221c] mb-2" onerror="handleImgError(this, 'Matilda')">
+          <div id="npc-name" class="font-bold text-xs text-[#fcf6ba]">Matilda Loisel</div>
+          <div id="npc-status" class="text-[10px] text-amber-200/80 mt-1">「我們該如何籌措這筆費用才好...？」</div>
+        </div>
+      </div>
+
+      <!-- 對話框區域 (Bilingual Dialogue) -->
+      <div class="bg-[#1e1814] border-2 border-[#c5a059]/60 rounded-lg p-3 relative shadow-inner">
+        <div class="text-xs font-bold text-[#c5a059] mb-1 flex justify-between">
+          <span>對話與情境句型：</span>
+          <span id="combo-display" class="text-amber-400 font-mono">Combo x0</span>
+        </div>
+        <div id="dialogue-en" class="text-sm sm:text-base font-semibold text-white mb-1 leading-snug">
+          "How much money will you spend on a new party dress?"
+        </div>
+        <div id="dialogue-zh" class="text-xs text-gray-400">
+          （你打算花多少錢買新洋裝？）
+        </div>
+      </div>
+
+      <!-- 選項按鈕區 (4卡片) -->
+      <div id="options-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <!-- JS 動態生成選項 -->
+      </div>
+    </main>
+
+    <!-- 3. 三階鷹架與 AI 導師抽屜 (SCAFFOLD_MODAL) -->
+    <div id="modal-scaffold" class="absolute inset-0 bg-black/80 z-30 hidden flex items-center justify-center p-4">
+      <div class="bg-[#221c18] border-2 border-[#c5a059] rounded-xl max-w-lg w-full p-5 relative space-y-4">
+        <div class="flex justify-between items-center border-b border-[#c5a059]/40 pb-2">
+          <h3 class="text-base font-bold text-amber-400 flex items-center gap-2">
+            <span>💡</span> 句型解題智慧引導 (Scaffolding)
+          </h3>
+          <span id="scaffold-tier" class="text-xs bg-amber-900/60 text-amber-200 px-2 py-0.5 rounded border border-amber-600">Hint Tier 1</span>
+        </div>
+
+        <div id="scaffold-content" class="text-xs sm:text-sm text-[#e6c994] leading-relaxed space-y-2 min-h-[80px]">
+          <!-- JS 動態插入 Hint 1 / Hint 2 / AI 引導 -->
+        </div>
+
+        <div class="flex justify-between items-center pt-2 border-t border-[#c5a059]/20">
+          <button id="btn-ai-tutor" onclick="askGeminiTutor()" class="text-xs bg-purple-900/50 hover:bg-purple-800 text-purple-200 px-3 py-1.5 rounded border border-purple-500/50 flex items-center gap-1">
+            ✨ Gemini AI 蘇格拉底導師
+          </button>
+          <button onclick="closeScaffoldModal()" class="gold-gradient text-black font-bold text-xs px-4 py-1.5 rounded hover:brightness-110">
+            重新嘗試作答 ➔
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 結算診斷報告畫面 (DIAGNOSTIC_REPORT) -->
+    <div id="screen-report" class="absolute inset-0 bg-[#15110e]/98 z-40 hidden flex flex-col p-6 overflow-y-auto">
+      <div class="text-center mb-4">
+        <h2 class="text-2xl font-bold gold-text font-playfair">巴黎大戰結算與句型診斷報告</h2>
+        <p class="text-xs text-gray-400">Learning Mastery & Diagnostic Summary</p>
+      </div>
+
+      <!-- 精熟度矩陣與得分 -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div class="bg-[#221c18] border border-[#c5a059]/40 p-3 rounded text-center">
+          <div class="text-[10px] text-gray-400">最終得分</div>
+          <div id="report-score" class="text-xl font-bold font-mono gold-text">1200</div>
+        </div>
+        <div class="bg-[#221c18] border border-[#c5a059]/40 p-3 rounded text-center">
+          <div class="text-[10px] text-gray-400">Matilda 最終狀態</div>
+          <div id="report-fate" class="text-sm font-bold text-emerald-400">幸福圓滿（避開十載沉痛）</div>
+        </div>
+        <div class="bg-[#221c18] border border-[#c5a059]/40 p-3 rounded text-center">
+          <div class="text-[10px] text-gray-400">全句正確朗讀率</div>
+          <div id="report-accuracy" class="text-xl font-bold font-mono text-amber-300">100%</div>
+        </div>
+      </div>
+
+      <!-- 四大句型精熟條 -->
+      <div class="bg-[#1e1814] border border-[#c5a059]/30 rounded p-4 mb-4 space-y-3">
+        <h4 class="text-xs font-bold text-[#c5a059] border-b border-[#c5a059]/20 pb-1">四大核心句型精熟診斷 (Knowledge Nodes)</h4>
+        
+        <div class="space-y-2 text-xs">
+          <div>
+            <div class="flex justify-between mb-1">
+              <span>KN1: 分詞構句簡化 (Participle Constructions)</span>
+              <span id="kn1-rate" class="font-mono">80%</span>
+            </div>
+            <div class="w-full bg-black h-2 rounded-full overflow-hidden">
+              <div id="kn1-bar" class="bg-amber-500 h-full w-[80%]"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span>KN2: if / whether 名詞子句 (Noun Clauses)</span>
+              <span id="kn2-rate" class="font-mono">100%</span>
+            </div>
+            <div class="w-full bg-black h-2 rounded-full overflow-hidden">
+              <div id="kn2-bar" class="bg-emerald-500 h-full w-[100%]"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span>KN3: 虛主詞 It 句型 (It is adj. for/of sb.)</span>
+              <span id="kn3-rate" class="font-mono">90%</span>
+            </div>
+            <div class="w-full bg-black h-2 rounded-full overflow-hidden">
+              <div id="kn3-bar" class="bg-blue-500 h-full w-[90%]"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span>KN4: 花費動詞比較 (spend / cost / take)</span>
+              <span id="kn4-rate" class="font-mono">75%</span>
+            </div>
+            <div class="w-full bg-black h-2 rounded-full overflow-hidden">
+              <div id="kn4-bar" class="bg-purple-500 h-full w-[75%]"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI 總評卡片 -->
+      <div id="ai-summary-card" class="bg-purple-950/30 border border-purple-500/40 p-3 rounded mb-4 text-xs text-purple-200 leading-relaxed">
+        <span class="font-bold text-purple-300">✨ Gemini AI 學習歷程分析：</span>
+        <span id="ai-summary-text">正在分析您的作答軌跡...</span>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="flex flex-wrap gap-2 justify-center mt-auto">
+        <button onclick="startMasteryRetry()" class="bg-amber-800/80 hover:bg-amber-700 text-white text-xs px-4 py-2 rounded border border-amber-500">
+          🔄 進入錯題重練池
+        </button>
+        <button onclick="exportCSV()" class="bg-emerald-800/80 hover:bg-emerald-700 text-white text-xs px-4 py-2 rounded border border-emerald-500">
+          📥 匯出學習歷程 (CSV)
+        </button>
+        <button onclick="location.reload()" class="gold-gradient text-black font-bold text-xs px-6 py-2 rounded hover:brightness-110">
+          🎮 重玩遊戲
+        </button>
+      </div>
+    </div>
+
+    <!-- 5. 設定 Modal (API Key) -->
+    <div id="modal-settings" class="absolute inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-[#221c18] border border-[#c5a059] rounded-xl max-w-md w-full p-5 space-y-4">
+        <h3 class="text-sm font-bold text-[#fcf6ba] border-b border-[#c5a059]/40 pb-2">系統設定 & Gemini API</h3>
+        <div class="space-y-2 text-xs">
+          <label class="block text-gray-300">Gemini API Key (選填，啟用即時 AI 蘇格拉底導師)：</label>
+          <input type="password" id="input-api-key" placeholder="AIzaSy..." class="w-full bg-[#15110e] border border-[#c5a059]/40 rounded p-2 text-white">
+          <p class="text-[10px] text-gray-500">若留空，遊戲將自動採用內建三階靜態鷹架提示與離線講評。</p>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button onclick="closeSettingsModal()" class="gold-gradient text-black font-bold text-xs px-4 py-1.5 rounded">
+            儲存並關閉
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JavaScript 遊戲核心 Logic -->
+  <script>
+    /* --- 1. 結構化題庫資料集 (12 題：8 情境題 + 4 統測真題) --- */
+    const QUESTIONS_DB = [
+      {
+        id: 1, stage: 1, stageName: "舞會前夕：禮服開銷", nodeId: "KN4", nodeName: "花費動詞",
+        character: "Matilda Loisel",
+        dialogueEn: "A nice dress will ______ at least 400 francs.",
+        dialogueZh: "（一件好看的洋裝至少會花費我 400 法郎。）",
+        options: ["(A) spend me", "(B) cost me", "(C) take to me", "(D) pay me"],
+        correctIndex: 1,
+        fullSentence: "A nice dress will cost me at least 400 francs.",
+        hints: [
+          "Hint 1: 當主詞是「事物 (A nice dress)」且後面接「金錢」時，該用哪一個花費動詞？",
+          "Hint 2: spend 的主詞必須是「人」；take 的主詞是事物時多用於「時間」。",
+          "解析：事物 + cost + 人 + 金錢。"
+        ],
+        imgQuery: "19th century dress paris"
+      },
+      {
+        id: 2, stage: 1, stageName: "舞會前夕：鞋款特價", nodeId: "KN4", nodeName: "花費動詞 (統測109)",
+        character: "Jeweler",
+        dialogueEn: "The shoes usually ______ a lot, but now they are relatively cheap after discount.",
+        dialogueZh: "（這雙鞋平時花費昂貴，但打折後相對便宜。）",
+        options: ["(A) spend", "(B) pay", "(C) take", "(D) cost"],
+        correctIndex: 3,
+        fullSentence: "The shoes usually cost a lot, but now they are relatively cheap after discount.",
+        hints: [
+          "Hint 1: 請注意主詞是物品 'The shoes'，後接費用 'a lot'。",
+          "Hint 2: 物品作主詞表花費金錢時，動詞需用 cost。",
+          "解析：事物 + cost + 金錢。"
+        ],
+        imgQuery: "vintage leather shoes"
+      },
+      {
+        id: 3, stage: 1, stageName: "舞會前夕：社會地位", nodeId: "KN3", nodeName: "虛主詞 It",
+        character: "Matilda Loisel",
+        dialogueEn: "It was very hard ______ to accept our low social status in Paris.",
+        dialogueZh: "（對我來說，很難接受我們在巴黎低下的社會地位。）",
+        options: ["(A) of me", "(B) to me", "(C) for me", "(D) with me"],
+        correctIndex: 2,
+        fullSentence: "It was very hard for me to accept our low social status in Paris.",
+        hints: [
+          "Hint 1: 形容詞 hard 是修飾「接受低社會地位這件事很困難」。",
+          "Hint 2: 修飾事物性質/難易度時，虛主詞結構應搭配介系詞 for。",
+          "解析：It is + adj. + for sb. + to V。"
+        ],
+        imgQuery: "parisian balcony victorian"
+      },
+      {
+        id: 4, stage: 1, stageName: "雨林冒險警語", nodeId: "KN3", nodeName: "虛主詞 It (統測114)",
+        character: "Guide",
+        dialogueEn: "It is risky for people ______ plants in rainforests because some plants can be poisonous.",
+        dialogueZh: "（對人們來說，觸摸雨林中的植物是有風險的，因為有些植物有毒。）",
+        options: ["(A) to touch", "(B) touching", "(C) touch", "(D) touched"],
+        correctIndex: 0,
+        fullSentence: "It is risky for people to touch plants in rainforests because some plants can be poisonous.",
+        hints: [
+          "Hint 1: 虛主詞 It 代替後面的真正主詞，需使用不定詞結構。",
+          "Hint 2: It is + adj. + for sb. + to V 中的真正主詞為 to + V。",
+          "解析：It + is + adj. + for sb. + to V。"
+        ],
+        imgQuery: "rainforest botanical garden"
+      },
+      {
+        id: 5, stage: 2, stageName: "借用項鍊：試探詢問", nodeId: "KN2", nodeName: "if / whether",
+        character: "Mr. Loisel",
+        dialogueEn: "Ask your friend Madame Forestier ______ she can lend you anything.",
+        dialogueZh: "（問問你的朋友 Forestier 夫人是否可以借你點什麼。）",
+        options: ["(A) whether", "(B) who", "(C) what", "(D) which"],
+        correctIndex: 0,
+        fullSentence: "Ask your friend Madame Forestier whether she can lend you anything.",
+        hints: [
+          "Hint 1: 此處需要一個引導名詞子句、表達「是否」的連接詞。",
+          "Hint 2: ask + 人 + whether/if... 表示詢問某人「是否」能給予協助。",
+          "解析：ask 後接 if/whether 引導名詞子句作受詞。"
+        ],
+        imgQuery: "diamond necklace velvet box"
+      },
+      {
+        id: 6, stage: 2, stageName: "借用項鍊：介系詞後", nodeId: "KN2", nodeName: "whether 獨占",
+        character: "Matilda Loisel",
+        dialogueEn: "I am really worried about ______ or not she will trust me with her jewel.",
+        dialogueZh: "（我非常擔心她是否願意將珠寶信任地借給我。）",
+        options: ["(A) if", "(B) that", "(C) when", "(D) whether"],
+        correctIndex: 3,
+        fullSentence: "I am really worried about whether or not she will trust me with her jewel.",
+        hints: [
+          "Hint 1: 請觀察空格緊跟在介系詞 about 之後，且後面有 or not。",
+          "Hint 2: 在介系詞之後，或是直接與 or not 連用時，只能使用 whether 不能用 if！",
+          "解析：介系詞 + whether；or not 直接跟在 whether 後。"
+        ],
+        imgQuery: "vintage hallway parlor"
+      },
+      {
+        id: 7, stage: 2, stageName: "拜訪朋友：客氣對話", nodeId: "KN3", nodeName: "人格形容詞 (統測112)",
+        character: "Madame Forestier",
+        dialogueEn: "It is kind ______ you to help me with my homework.",
+        dialogueZh: "（你願意幫忙我做作業真是太熱心了。）",
+        options: ["(A) for", "(B) as", "(C) of", "(D) to"],
+        correctIndex: 2,
+        fullSentence: "It is kind of you to help me with my homework.",
+        hints: [
+          "Hint 1: 形容詞 kind 是修飾人的「特質/性格」還是「事情」？",
+          "Hint 2: 表達某人的性格特質（如 kind, polite）時，要用 of sb.。",
+          "解析：It is + adj.(修飾人) + of sb. + to V。"
+        ],
+        imgQuery: "19th century parlor conversation"
+      },
+      {
+        id: 8, stage: 3, stageName: "遺失危機：不敢坦白", nodeId: "KN1", nodeName: "分詞構句 (否定)",
+        character: "Narrator",
+        dialogueEn: "______ to tell Madame Forestier, the couple returned a similar one to her.",
+        dialogueZh: "（不敢告訴 Forestier 夫人，這對夫妻歸還了一條類似的給她。）",
+        options: ["(A) Daring not", "(B) Not daring", "(C) Not dared", "(D) Didn't dare"],
+        correctIndex: 1,
+        fullSentence: "Not daring to tell Madame Forestier, the couple returned a similar one to her.",
+        hints: [
+          "Hint 1: 此句是由 Because they didn't dare... 簡化而來的分詞構句。",
+          "Hint 2: 分詞構句表示否定時，否定詞 not 必須放在分詞的前面。",
+          "解析：Not + V-ing，否定詞 not 置於分詞前面。"
+        ],
+        imgQuery: "shadowy night street paris"
+      },
+      {
+        id: 9, stage: 3, stageName: "遺失危機：警方包圍", nodeId: "KN1", nodeName: "分詞構句 (被動)",
+        character: "Officer",
+        dialogueEn: "While ______ by the police, the robber raised his hands in surrender.",
+        dialogueZh: "（當被警方包圍時，搶匪舉起雙手表示投降。）",
+        options: ["(A) surrounding", "(B) surround", "(C) surrounded", "(D) surrounds"],
+        correctIndex: 2,
+        fullSentence: "While surrounded by the police, the robber raised his hands in surrender.",
+        hints: [
+          "Hint 1: 搶匪與「包圍 (surround)」的關係是主動執行還是被包圍？",
+          "Hint 2: 被動動作在簡化分詞構句時應保留過去分詞 Vpp (surrounded)。",
+          "解析：保留連接詞 while + 被動語態 Vpp。"
+        ],
+        imgQuery: "vintage police carriage"
+      },
+      {
+        id: 10, stage: 3, stageName: "歷史觀念：地平說", nodeId: "KN1", nodeName: "分詞構句 (主動/統測109)",
+        character: "Historian",
+        dialogueEn: "______ the earth to be flat, many people at that time were afraid that he would fall off the edge.",
+        dialogueZh: "（相信地球是平的，當時許多人害怕自己會從世界邊緣掉下去。）",
+        options: ["(A) Believe", "(B) They believed", "(C) Believed", "(D) Believing"],
+        correctIndex: 3,
+        fullSentence: "Believing the earth to be flat, many people at that time were afraid that he would fall off the edge of the world.",
+        hints: [
+          "Hint 1: 此為省略連接詞與相同主詞 many people 的分詞構句。",
+          "Hint 2: 主動動作（相信）改為現在分詞 V-ing (Believing)。",
+          "解析：V-ing, S + V 主動分詞構句。"
+        ],
+        imgQuery: "ancient world map mapmaker"
+      },
+      {
+        id: 11, stage: 4, stageName: "十年還債：時間代價", nodeId: "KN4", nodeName: "take 花費時間",
+        character: "Mr. Loisel",
+        dialogueEn: "It cost forty thousand francs. It ______ us ten years to pay off the debt.",
+        dialogueZh: "（它要價四萬法郎。我們花了十年的時間來還債。）",
+        options: ["(A) took", "(B) spent", "(C) costed", "(D) paid"],
+        correctIndex: 0,
+        fullSentence: "It cost forty thousand francs. It took us ten years to pay off the debt.",
+        hints: [
+          "Hint 1: 句型主詞是 It，後面接的對象是「時間 (ten years)」。",
+          "Hint 2: It + take + 人 + 時間 + to V 用於表達完成某事花費多少時間。",
+          "解析：It + took + 人 + 時間 + to V。"
+        ],
+        imgQuery: "old cobblestone street debt"
+      },
+      {
+        id: 12, stage: 4, stageName: "十年還債：結局對話", nodeId: "KN1", nodeName: "完成分詞構句",
+        character: "Matilda Loisel",
+        dialogueEn: "______ her homework, Linda can go out with her friends.",
+        dialogueZh: "（已經完成了作業，Linda 可以和朋友出門了。）",
+        options: ["(A) Paid", "(B) Pay", "(C) After paid", "(D) Having finished"],
+        correctIndex: 3,
+        fullSentence: "Having finished her homework, Linda can go out with her friends.",
+        hints: [
+          "Hint 1: 「完成作業」是先發生且已完成的動作。",
+          "Hint 2: 副詞子句表達完成時態時，簡化為分詞構句要用 Having + Vpp。",
+          "解析：Having finished... 完成分詞構句。"
+        ],
+        imgQuery: "paris sunset vintage window"
+      }
+    ];
+
+    /* --- 2. 遊戲狀態變數 (Telemetry & State) --- */
+    let gameState = {
+      currentIndex: 0,
+      score: 0,
+      hp: 100,
+      combo: 0,
+      soundEnabled: true,
+      apiKey: "",
+      wrongAttempts: 0,
+      nodeStats: {
+        KN1: { total: 4, correct: 0 },
+        KN2: { total: 3, correct: 0 },
+        KN3: { total: 3, correct: 0 },
+        KN4: { total: 2, correct: 0 }
+      },
+      mistakePool: []
+    };
+
+    /* --- 3. Web Audio API 音效合成器 --- */
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    function playSound(type) {
+      if (!gameState.soundEnabled) return;
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'correct') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+      } else if (type === 'wrong') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(130, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+      } else if (type === 'click') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+      }
+    }
+
+    function toggleSound() {
+      gameState.soundEnabled = !gameState.soundEnabled;
+      document.getElementById('btn-sound').innerText = gameState.soundEnabled ? '🔊' : '🔇';
+    }
+
+    /* --- 4. Web Speech API 全句英文朗讀 (TTS) --- */
+    function speakText(text) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function readCurrentSentence() {
+      const q = QUESTIONS_DB[gameState.currentIndex];
+      speakText(q.fullSentence);
+    }
+
+    /* --- 5. 防破圖 SVG 保底圖片生成 --- */
+    function handleImgError(imgEl, fallbackTitle) {
+      imgEl.onerror = null;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="260" viewBox="0 0 400 260">
+        <rect width="100%" height="100%" rx="12" fill="#2a221c" stroke="#c5a059" stroke-width="2"/>
+        <circle cx="200" cy="110" r="30" fill="#c5a059" opacity="0.3"/>
+        <text x="200" y="118" font-size="24" text-anchor="middle" fill="#fcf6ba">💎</text>
+        <text x="200" y="180" font-family="serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#c5a059">${fallbackTitle}</text>
+      </svg>`;
+      imgEl.src = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+    }
+
+    /* --- 6. 遊戲主流程 Logic --- */
+    function startGame() {
+      playSound('click');
+      document.getElementById('screen-init').classList.add('hidden');
+      loadQuestion(0);
+    }
+
+    function loadQuestion(index) {
+      gameState.currentIndex = index;
+      gameState.wrongAttempts = 0;
+      const q = QUESTIONS_DB[index];
+
+      // 更新 HUD & 標籤
+      document.getElementById('stage-indicator').innerText = `Stage ${q.stage}: ${q.stageName}`;
+      document.getElementById('question-tag').innerText = `${q.nodeId}: ${q.nodeName}`;
+      document.getElementById('dialogue-en').innerText = `"${q.dialogueEn}"`;
+      document.getElementById('dialogue-zh').innerText = q.dialogueZh;
+      document.getElementById('npc-name').innerText = q.character;
+      document.getElementById('scene-desc').innerText = `${q.stageName} - 抉擇時刻`;
+
+      // 更新圖像 (Pollinations AI + DiceBear)
+      const encodedPrompt = encodeURIComponent(`${q.imgQuery}, 19th century paris, victorian oil painting style`);
+      document.getElementById('scene-img').src = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=500&height=300&seed=${q.id}&nologo=true`;
+      document.getElementById('avatar-img').src = `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(q.character)}`;
+
+      // 生成選項
+      const grid = document.getElementById('options-grid');
+      grid.innerHTML = '';
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = "bg-[#2a221c] border border-[#c5a059]/40 hover:border-[#fcf6ba] hover:bg-[#3a3028] text-white text-xs sm:text-sm font-semibold p-2.5 rounded-lg text-left transition duration-150 flex items-center justify-between";
+        btn.innerHTML = `<span>${opt}</span> <span class="text-[10px] text-gray-500">Choice ${idx+1}</span>`;
+        btn.onclick = () => checkAnswer(idx);
+        grid.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(chosenIdx) {
+      const q = QUESTIONS_DB[gameState.currentIndex];
+
+      if (chosenIdx === q.correctIndex) {
+        // 答對處理
+        playSound('correct');
+        gameState.score += 100 + (gameState.combo * 20);
+        gameState.combo += 1;
+        gameState.hp = Math.min(100, gameState.hp + 10);
+        gameState.nodeStats[q.nodeId].correct += 1;
+
+        updateHUD();
+        // 朗讀完整正確句子
+        speakText(q.fullSentence);
+
+        // 推進下一題
+        if (gameState.currentIndex + 1 < QUESTIONS_DB.length) {
+          setTimeout(() => loadQuestion(gameState.currentIndex + 1), 1500);
+        } else {
+          setTimeout(showReport, 1500);
+        }
+      } else {
+        // 答錯處理
+        playSound('wrong');
+        gameState.combo = 0;
+        gameState.hp = Math.max(0, gameState.hp - 15);
+        gameState.wrongAttempts += 1;
+        if (!gameState.mistakePool.includes(q.id)) gameState.mistakePool.push(q.id);
+
+        updateHUD();
+        openScaffoldModal();
+      }
+    }
+
+    function updateHUD() {
+      document.getElementById('score-display').innerText = String(gameState.score).padStart(4, '0');
+      document.getElementById('hp-bar').style.width = `${gameState.hp}%`;
+      document.getElementById('hp-text').innerText = `${gameState.hp}%`;
+      document.getElementById('combo-display').innerText = `Combo x${gameState.combo}`;
+    }
+
+    /* --- 7. 三階鷹架抽屜與 Gemini AI 導師 --- */
+    function openScaffoldModal() {
+      const q = QUESTIONS_DB[gameState.currentIndex];
+      const modal = document.getElementById('modal-scaffold');
+      const content = document.getElementById('scaffold-content');
+      const tierTag = document.getElementById('scaffold-tier');
+
+      if (gameState.wrongAttempts === 1) {
+        tierTag.innerText = "Hint Tier 1: 結構語意線索";
+        content.innerHTML = `<p class="font-bold text-amber-300">${q.hints[0]}</p>`;
+      } else {
+        tierTag.innerText = "Hint Tier 2: 迷思觀念破除";
+        content.innerHTML = `
+          <p class="text-gray-300">${q.hints[0]}</p>
+          <p class="font-bold text-amber-300 mt-2">${q.hints[1]}</p>
+        `;
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeScaffoldModal() {
+      playSound('click');
+      document.getElementById('modal-scaffold').classList.add('hidden');
+    }
+
+    async function askGeminiTutor() {
+      const q = QUESTIONS_DB[gameState.currentIndex];
+      const content = document.getElementById('scaffold-content');
+      content.innerHTML = `<p class="text-purple-300 animate-pulse">✨ Gemini AI 正在分析您的句子結構並撰寫蘇格拉底引導...</p>`;
+
+      const apiKey = gameState.apiKey;
+      if (!apiKey) {
+        setTimeout(() => {
+          content.innerHTML = `
+            <p class="text-purple-300 font-bold">[離線 AI 導師引導]：</p>
+            <p class="text-xs text-gray-200 mt-1">${q.hints[2]}</p>
+            <p class="text-[10px] text-gray-400 mt-2">💡 提示：您可點擊右上角 ⚙️ 輸入 Gemini API Key 啟用動態生成引導。</p>
+          `;
+        }, 800);
+        return;
+      }
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const prompt = `你是一位親切的英文文法導師。學生在回答這個題目時遇到困難：
+題目：${q.dialogueEn}
+對應知識點：${q.nodeName} (${q.nodeId})
+請用 60 字以內的繁體中文，給予一個不直接給答案、但能啟發思考的蘇格拉底式文法提示。`;
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await res.json();
+        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || q.hints[2];
+        content.innerHTML = `<p class="text-purple-200">${aiText}</p>`;
+      } catch (err) {
+        content.innerHTML = `<p class="text-amber-200">${q.hints[2]}</p>`;
+      }
+    }
+
+    /* --- 8. 結算報告與匯出 Logic --- */
+    function showReport() {
+      document.getElementById('screen-report').classList.remove('hidden');
+      document.getElementById('report-score').innerText = gameState.score;
+
+      // Matilda 命運判定
+      const fateEl = document.getElementById('report-fate');
+      if (gameState.hp >= 80) {
+        fateEl.innerText = "🌟 完美結局：理智應對，重寫幸福人生！";
+        fateEl.className = "text-sm font-bold text-emerald-400";
+      } else if (gameState.hp >= 50) {
+        fateEl.innerText = "⚖️ 平凡結局：安然渡過債務危機。";
+        fateEl.className = "text-sm font-bold text-amber-400";
+      } else {
+        fateEl.innerText = "🥀 悲劇重演：陷入十年還債輪迴。";
+        fateEl.className = "text-sm font-bold text-red-400";
+      }
+
+      // 更新條狀圖
+      updateStatBar('kn1', gameState.nodeStats.KN1);
+      updateStatBar('kn2', gameState.nodeStats.KN2);
+      updateStatBar('kn3', gameState.nodeStats.KN3);
+      updateStatBar('kn4', gameState.nodeStats.KN4);
+
+      // AI 總評生成
+      generateAISummary();
+    }
+
+    function updateStatBar(idPrefix, stat) {
+      const pct = Math.round((stat.correct / stat.total) * 100) || 0;
+      document.getElementById(`${idPrefix}-rate`).innerText = `${pct}%`;
+      document.getElementById(`${idPrefix}-bar`).style.width = `${pct}%`;
+    }
+
+    function generateAISummary() {
+      const summaryText = document.getElementById('ai-summary-text');
+      summaryText.innerText = `表現優異！您在「if/whether 名詞子句」表現極佳。建議加強「分詞構句」主被動簡化與「花費動詞 (cost/spend/take)」的主詞搭配。`;
+    }
+
+    function startMasteryRetry() {
+      if (gameState.mistakePool.length === 0) {
+        alert("恭喜！您並無錯題，已精熟所有句型！");
+        return;
+      }
+      alert(`進入錯題重練池，共有 ${gameState.mistakePool.length} 題需複習。`);
+      document.getElementById('screen-report').classList.add('hidden');
+      loadQuestion(gameState.mistakePool[0]);
+    }
+
+    function exportCSV() {
+      const name = document.getElementById('player-name').value || "Student";
+      let csv = "Name,Score,Happiness,KN1_Rate,KN2_Rate,KN3_Rate,KN4_Rate\n";
+      csv += `${name},${gameState.score},${gameState.hp}%,`;
+      csv += `${Math.round((gameState.nodeStats.KN1.correct/4)*100)}%,`;
+      csv += `${Math.round((gameState.nodeStats.KN2.correct/3)*100)}%,`;
+      csv += `${Math.round((gameState.nodeStats.KN3.correct/3)*100)}%,`;
+      csv += `${Math.round((gameState.nodeStats.KN4.correct/2)*100)}%\n`;
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${name}_English_L3_Report.csv`;
+      a.click();
+    }
+
+    /* --- 9. Modal 操作 --- */
+    function openSettingsModal() {
+      document.getElementById('modal-settings').classList.remove('hidden');
+    }
+    function closeSettingsModal() {
+      gameState.apiKey = document.getElementById('input-api-key').value.trim();
+      document.getElementById('modal-settings').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
